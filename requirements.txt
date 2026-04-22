@@ -1,6 +1,8 @@
 playwright>=1.44.0
 pandas>=2.2.0
 openpyxl
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
 mcp
 uvicorn
 starlette

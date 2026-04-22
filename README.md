@@ -1,15 +1,30 @@
 # Vahan Scraper
 
-A Playwright-based scraper for the [Vahan Dashboard](https://vahan.parivahan.gov.in/vahan4dashboard/vahan/view/reportview.xhtml): India's national vehicle registration database. Downloads `.xlsx` files for any combination of Y-Axis, X-Axis, state, RTO, and year.
+A scraper for the [Vahan Dashboard](https://vahan.parivahan.gov.in/vahan4dashboard/vahan/view/reportview.xhtml): India's national vehicle registration database.
+
+Two scraping methods are available:
+
+| | `scraper.py` | `api.py` |
+|---|---|---|
+| Method | Playwright browser automation | Direct AJAX/HTTP requests |
+| Output | `.xlsx` (downloaded from site) | `.csv` (parsed from HTML table) |
+| Speed | Slower (browser startup + download per file) | ~10× faster (plain HTTP, no browser) |
+| Use when | You need the original XLSX format | You need speed or can't install Playwright |
+
+Both tools use identical CLI flags and write to the same `--out` directory layout, so you can switch between them without changing anything else.
+
+---
 
 ## Requirements
 
 ```bash
 pip install -r requirements.txt
-playwright install chromium
+playwright install chromium   # only needed for scraper.py
 ```
 
-## Usage
+---
+
+## scraper.py — Browser-based (XLSX output)
 
 ```
 python3 scripts/scraper.py --yaxis <value> --xaxis <value> [options]
@@ -31,71 +46,100 @@ python3 scripts/scraper.py --yaxis <value> --xaxis <value> [options]
 | `--list-options` | No | — | Print all available dropdown options and exit |
 | `--no-headless` | No | — | Show the browser window (useful for debugging) |
 
-*`--yaxis` and `--xaxis` are required unless `--list-options` is used.
+*Required unless `--list-options` is used.
 
-### Y-Axis options
+### Examples
 
-`Vehicle Category`, `Vehicle Class`, `Norms`, `Fuel`, `Maker`, `State`
+```bash
+# See all available states, axes, and years from the live site
+python3 scripts/scraper.py --list-options
 
-### X-Axis options
+# All-states aggregate, current year
+python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel"
 
-`Vehicle Category`, `Norms`, `Fuel`, `Vehicle Category Group`, `Financial Year`, `Calendar Year`, `Month Wise`
+# Specific state and year
+python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" --state "Kerala" --year 2025
+
+# Year range for a state
+python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" \
+  --state "Kerala" --start-year 2020 --end-year 2026
+
+# All RTOs in a state, year range
+python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" \
+  --state "Kerala" --all-rtos --start-year 2020 --end-year 2026
+
+# Specific RTOs
+python3 scripts/scraper.py --yaxis "Maker" --xaxis "Fuel" \
+  --state "Kerala" --rto "TRIVANDRUM RTO - KL1" "KOLLAM RTO - KL2"
+
+# Debug (show browser window)
+python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" \
+  --state "Delhi" --no-headless
+```
 
 ---
 
-## Examples
+## api.py — HTTP-based (CSV output, no browser)
 
-**See all available states, axes, and years from the live site:**
-```bash
-python3 scripts/scraper.py --list-options
+Replays the PrimeFaces AJAX protocol the dashboard uses internally.
+Significantly faster than the browser-based approach.
+
+```
+python3 scripts/api.py --yaxis <value> --xaxis <value> [options]
 ```
 
-**All-states aggregate, current year:**
-```bash
-python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel"
-```
+Same flags as `scraper.py` except there is no `--no-headless` (no browser involved).
+Output files are `.csv` instead of `.xlsx`.
 
-**Specific state, specific year:**
-```bash
-python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" --state "Kerala" --year 2025
-```
+### Examples
 
-**Specific state, year range:**
 ```bash
-python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" --state "Kerala" --start-year 2020 --end-year 2026
-```
+# See all available options (reads from live site, no browser)
+python3 scripts/api.py --list-options
 
-**All RTOs in a state, year range:**
-```bash
-python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" \
+# All-states aggregate, current year
+python3 scripts/api.py --yaxis "Vehicle Category" --xaxis "Fuel"
+
+# Specific state and year
+python3 scripts/api.py --yaxis "Vehicle Category" --xaxis "Fuel" --state "Kerala" --year 2025
+
+# Year range for a state
+python3 scripts/api.py --yaxis "Vehicle Category" --xaxis "Fuel" \
+  --state "Kerala" --start-year 2020 --end-year 2026
+
+# All RTOs in a state, year range
+python3 scripts/api.py --yaxis "Vehicle Category" --xaxis "Fuel" \
   --state "Kerala" --all-rtos --start-year 2020 --end-year 2026
+
+# Specific RTOs (partial name match)
+python3 scripts/api.py --yaxis "Maker" --xaxis "Fuel" \
+  --state "Kerala" --rto "TRIVANDRUM" "KOLLAM"
 ```
 
-**Specific RTOs:**
-```bash
-python3 scripts/scraper.py --yaxis "Maker" --xaxis "Fuel" \
-  --state "Kerala" --rto "TRIVANDRUM RTO - KL1" "KOLLAM RTO - KL2"
-```
+---
 
-**Debug (show browser window):**
-```bash
-python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" --state "Delhi" --no-headless
-```
+## Axis options
+
+### Y-Axis
+`Vehicle Category`, `Vehicle Class`, `Norms`, `Fuel`, `Maker`, `State`
+
+### X-Axis
+`Vehicle Category`, `Norms`, `Fuel`, `Vehicle Category Group`, `Financial Year`, `Calendar Year`, `Month Wise`
 
 ---
 
 ## Output structure
 
-Files are saved under `--out` (default: `vahan_data/`) with this layout:
+Both tools write to the same layout under `--out` (default: `vahan_data/`):
 
 ```
 vahan_data/
-└── <state>/               # e.g. Kerala_87_ or all_states
-    └── <rto>/             # e.g. TRIVANDRUM_RTO___KL1 or all_rtos
+└── <state>/                      # e.g. Kerala_87_ or all_states
+    └── <rto>/                    # e.g. TRIVANDRUM_RTO___KL1 or all_rtos
         └── <yaxis>__<xaxis>/
-            ├── 2020.xlsx
-            ├── 2021.xlsx
+            ├── 2020.xlsx          # scraper.py
+            ├── 2021.csv           # api.py
             └── ...
 ```
 
-Already-downloaded files are skipped automatically, so interrupted runs can be safely resumed.
+Already-downloaded files are skipped automatically, so interrupted runs resume safely.
