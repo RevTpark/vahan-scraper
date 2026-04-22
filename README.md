@@ -24,7 +24,7 @@ playwright install chromium   # only needed for scraper.py
 
 ---
 
-## scraper.py — Browser-based (XLSX output)
+## scraper.py - Browser-based (XLSX output)
 
 ```
 python3 scripts/scraper.py --yaxis <value> --xaxis <value> [options]
@@ -79,7 +79,7 @@ python3 scripts/scraper.py --yaxis "Vehicle Category" --xaxis "Fuel" \
 
 ---
 
-## api.py — HTTP-based (CSV output, no browser)
+## api.py - HTTP-based (CSV output, no browser)
 
 Replays the PrimeFaces AJAX protocol the dashboard uses internally.
 Significantly faster than the browser-based approach.
