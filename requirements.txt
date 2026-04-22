@@ -1,0 +1,6 @@
+playwright>=1.44.0
+pandas>=2.2.0
+openpyxl
+mcp
+uvicorn
+starlette
